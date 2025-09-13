@@ -259,3 +259,176 @@ npx prisma migrate dev
 ```
 
 ## 49-5 One-to-Many Relation in Prisma
+
+![alt text](image-1.png)
+
+- lets make the relation 
+
+```prisma
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         Int        @id @default(autoincrement())
+  name       String
+  email      String
+  password   String?
+  role       Role       @default(USER)
+  phone      String
+  picture    String?
+  status     UserStatus @default(ACTIVE)
+  isVerified Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  Posts       Post[] // relationship making 
+}
+
+model Post {
+  id         Int      @id @default(autoincrement())
+  title      String
+  content    String
+  thumbnail  String?
+  isFeatured Boolean  @default(false)
+  tags       String[]
+  views      Int      @default(0)
+  authorId   Int
+  author     User     @relation(fields: [authorId], references: [id]) // for relationship 
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  USER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
+```
+
+```
+npx prisma migrate dev
+```
+- create src -> modules -> user -> user.controller.ts , user.route.ts, user.service.ts 
+
+## 49-6 Create User in Database
+- app.ts (router connected)
+
+```ts
+import compression from "compression";
+import cors from "cors";
+import express from "express";
+import { UserRouter } from "./modules/user/user.routes";
+
+const app = express();
+
+// Middleware
+app.use(cors()); // Enables Cross-Origin Resource Sharing
+app.use(compression()); // Compresses response bodies for faster delivery
+app.use(express.json()); // Parse incoming JSON requests
+
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  })
+);
+
+app.use("/api/v1/user", UserRouter) // added the route
+
+// Default route for testing
+app.get("/", (_req, res) => {
+  res.send("API is running");
+});
+
+
+// 404 Handler
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    message: "Route Not Found",
+  });
+});
+
+export default app;
+
+```
+
+- src -> modules -> user -> user.route.ts 
+
+```ts 
+import express from 'express';
+import { UserController } from './user.controller';
+const router = express.Router();
+
+router.post("/", UserController.createUser);
+
+export const UserRouter = router; 
+```
+
+- src -> modules -> user -> user.controller.ts 
+
+```ts 
+import { Request, Response } from "express";
+import { UserService } from "./user.service";
+
+const createUser = async (req:Request, res:Response) =>{
+    try {
+        const result = await UserService.createUser(req.body)
+        res.send(result)
+    } catch (error) {
+        console.log(error)
+    }
+} 
+
+export const UserController = {
+    createUser
+}
+```
+
+- src -> modules -> user -> user.service.ts 
+
+```ts 
+import { prisma } from "../../config/db"
+
+const createUser = async(payload:any) =>{
+    console.log(payload)
+    console.log("Create User!")
+    const createdUser = await prisma.user.create({
+        data : payload
+    })
+    return createdUser
+}
+
+export const UserService = {
+    createUser
+}
+```
+
+- now hit is postman 
+
+```json
+{
+    "id": 3,
+    "name": "Charlie Brown",
+    "email": "charlie@example.com",
+    "phone": "+8801700000003"
+}
+```
