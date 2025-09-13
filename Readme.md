@@ -151,3 +151,44 @@ function handleProcessEvents() {
 startServer();
 
 ```
+
+## 49-3 Requirement Analysis (User, Post)
+- there is a bug in connecting the database 
+- as we have nothing inside schema and we didn't do any migration so the bridge is not created for this reason this error is coming  
+- prisma -> prisma.schema (create user schema)
+
+```prisma 
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id Int @id @default(autoincrement())
+}
+```
+- migrate it 
+
+```
+npx prisma migrate dev
+```
+- now run 
+
+```
+npm run dev
+```
+- now this will run the server 
+
+#### Lets understand the Blog App project first 
+
+![alt text](image.png)
