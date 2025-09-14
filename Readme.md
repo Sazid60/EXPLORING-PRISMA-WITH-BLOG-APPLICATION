@@ -550,3 +550,348 @@ router.post("/", UserController.createUser);
 export const UserRouter = router; 
 
 ```
+
+## 49-8 Get User by ID
+
+- we can do sorting as well - > user.service.ts 
+
+```ts
+
+const getAllUsersFromDB = async () => {
+    // const result = await prisma.user.findMany()
+    // if we want selected fields 
+    const result = await prisma.user.findMany({
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            picture: true,
+            createdAt: true,
+            updatedAt: true,
+            role: true,
+            status: true
+        },
+        orderBy :{
+            createdAt : "desc"
+        }
+    })
+    return result
+}
+
+```
+
+- if we ant to populate we can mention in `select`
+
+- There is another method of populating is `include`. remember if we use `select` we do not seed to use `include` and if we use `include` there is no need of using `select`
+
+```ts 
+const getAllUsersFromDB = async () => {
+    const result = await prisma.user.findMany({
+        // select: {
+        //     id: true,
+        //     name: true,
+        //     email: true,
+        //     phone: true,
+        //     picture: true,
+        //     createdAt: true,
+        //     updatedAt: true,
+        //     role: true,
+        //     status: true
+        // },
+        orderBy: {
+            createdAt: "desc"
+        },
+        include :{
+            posts : true
+        }
+    })
+return result
+}
+```
+
+```ts 
+const getAllUsersFromDB = async () => {
+    const result = await prisma.user.findMany({
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            picture: true,
+            createdAt: true,
+            updatedAt: true,
+            role: true,
+            status: true,
+            posts : true
+        },
+        orderBy: {
+            createdAt: "desc"
+        },
+        // include :{
+        //     posts : true
+        // }
+    })
+return result
+}
+```
+
+- get single user by id 
+- user.routes.ts 
+```ts 
+import express from 'express';
+import { UserController } from './user.controller';
+const router = express.Router();
+
+router.get("/", UserController.getAllUsersFromDB)
+router.get("/:id", UserController.getUserById)
+router.post("/", UserController.createUser);
+
+export const UserRouter = router; 
+
+```
+- user.controller.ts 
+
+```ts 
+import { Request, Response } from "express";
+import { UserService } from "./user.service";
+
+const createUser = async (req:Request, res:Response) =>{
+    try {
+        const result = await UserService.createUser(req.body)
+        res.status(201).json(result)
+    } catch (error) {
+        console.log(error)
+        res.status(500).send(error)
+    }
+} 
+const getAllUsersFromDB = async (req:Request, res:Response) =>{
+    try {
+        const result = await UserService.getAllUsersFromDB()
+        res.status(200).json(result)
+    } catch (error) {
+        res.status(500).send(error)
+    }
+} 
+const getUserById = async (req:Request, res:Response) =>{
+    try {
+       
+        const result = await UserService.getUserById(Number(req.params.id))
+        res.status(200).json(result)
+    } catch (error) {
+        res.status(500).send(error)
+    }
+} 
+
+export const UserController = {
+    createUser,
+    getAllUsersFromDB,
+    getUserById
+}
+```
+
+- user.service.ts 
+
+```ts 
+import { Prisma, User } from "@prisma/client"
+import { prisma } from "../../config/db"
+
+const createUser = async (payload: Prisma.UserCreateInput): Promise<User> => {
+    // prism a made this type for us 
+    console.log(payload)
+    console.log("Create User!")
+    const createdUser = await prisma.user.create({
+        data: payload
+    })
+    return createdUser
+}
+
+// const getAllUsersFromDB = async () => {
+//     // const result = await prisma.user.findMany()
+//     // if we want selected fields 
+//     const result = await prisma.user.findMany({
+//         select: {
+//             id: true,
+//             name: true,
+//             email: true,
+//             phone: true,
+//             picture: true,
+//             createdAt: true,
+//             updatedAt: true,
+//             role: true,
+//             status: true
+//         },
+//         orderBy :{
+//             createdAt : "desc"
+//         }
+//     })
+//     return result
+// }
+const getAllUsersFromDB = async () => {
+    const result = await prisma.user.findMany({
+        select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            picture: true,
+            createdAt: true,
+            updatedAt: true,
+            role: true,
+            status: true,
+            posts: true
+        },
+        orderBy: {
+            createdAt: "desc"
+        },
+        // include :{
+        //     posts : true
+        // }
+    })
+    return result
+}
+
+const getUserById = async(id:number) =>{
+    const result = prisma.user.findUnique({
+        where :{
+            id
+        }
+    })
+    return result 
+}
+export const UserService = {
+    createUser,
+    getAllUsersFromDB,
+    getUserById
+}
+
+```
+
+## 49-9 -Create Post in Database
+
+- post.service.ts 
+
+```ts 
+import { Post, Prisma } from "@prisma/client";
+import { prisma } from "../../config/db";
+
+const createPost = async (payload: Prisma.PostCreateInput): Promise<Post> => {
+    const result = await prisma.post.create({
+        data: payload,
+        include: {
+            author: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true
+                }
+            }
+        }
+    })
+
+    return result;
+}
+
+export const PostService = {
+    createPost
+}
+```
+
+- post.controller.ts 
+
+```ts 
+import { Request, Response } from "express";
+import { PostService } from "./post.service";
+
+const createPost = async (req: Request, res: Response) => {
+    try {
+        const result = await PostService.createPost(req.body)
+        res.status(201).json(result);
+    } catch (error) {
+        res.status(500).send(error)
+    }
+}
+
+export const PostController = {
+    createPost
+}
+```
+- post.router.ts 
+
+```ts 
+import express from 'express';
+import { PostController } from './post.controller';
+
+const router = express.Router();
+
+router.post(
+    "/",
+    PostController.createPost
+)
+
+// get all posts
+// get single post
+// update post
+// delete post
+
+export const postRouter = router;
+```
+
+- app.ts 
+
+```ts 
+import compression from "compression";
+import cors from "cors";
+import express from "express";
+import { UserRouter } from "./modules/user/user.routes";
+import { postRouter } from "./modules/post/post.router";
+
+const app = express();
+
+// Middleware
+app.use(cors()); // Enables Cross-Origin Resource Sharing
+app.use(compression()); // Compresses response bodies for faster delivery
+app.use(express.json()); // Parse incoming JSON requests
+
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  })
+);
+
+app.use("/api/v1/user", UserRouter) // added the route
+app.use("/api/v1/post", postRouter) // added the route
+
+// Default route for testing
+app.get("/", (_req, res) => {
+  res.send("API is running");
+});
+
+
+// 404 Handler
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    message: "Route Not Found",
+  });
+});
+
+export default app;
+
+```
+
+- postman 
+
+
+```json 
+{
+  "title": "Getting Started with Prisma ORM",
+  "content": "In this post, we will explore how to set up Prisma ORM with a PostgreSQL database, generate the client, and run queries easily.",
+  "thumbnail": "https://example.com/thumbnails/prisma-guide.png",
+  "isFeatured": true,
+  "tags": ["prisma", "nodejs", "typescript", "postgresql"],
+  "authorId": 3
+}
+
+```
