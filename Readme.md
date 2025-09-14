@@ -766,3 +766,132 @@ export const UserService = {
 }
 
 ```
+
+## 49-9 -Create Post in Database
+
+- post.service.ts 
+
+```ts 
+import { Post, Prisma } from "@prisma/client";
+import { prisma } from "../../config/db";
+
+const createPost = async (payload: Prisma.PostCreateInput): Promise<Post> => {
+    const result = await prisma.post.create({
+        data: payload,
+        include: {
+            author: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true
+                }
+            }
+        }
+    })
+
+    return result;
+}
+
+export const PostService = {
+    createPost
+}
+```
+
+- post.controller.ts 
+
+```ts 
+import { Request, Response } from "express";
+import { PostService } from "./post.service";
+
+const createPost = async (req: Request, res: Response) => {
+    try {
+        const result = await PostService.createPost(req.body)
+        res.status(201).json(result);
+    } catch (error) {
+        res.status(500).send(error)
+    }
+}
+
+export const PostController = {
+    createPost
+}
+```
+- post.router.ts 
+
+```ts 
+import express from 'express';
+import { PostController } from './post.controller';
+
+const router = express.Router();
+
+router.post(
+    "/",
+    PostController.createPost
+)
+
+// get all posts
+// get single post
+// update post
+// delete post
+
+export const postRouter = router;
+```
+
+- app.ts 
+
+```ts 
+import compression from "compression";
+import cors from "cors";
+import express from "express";
+import { UserRouter } from "./modules/user/user.routes";
+import { postRouter } from "./modules/post/post.router";
+
+const app = express();
+
+// Middleware
+app.use(cors()); // Enables Cross-Origin Resource Sharing
+app.use(compression()); // Compresses response bodies for faster delivery
+app.use(express.json()); // Parse incoming JSON requests
+
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  })
+);
+
+app.use("/api/v1/user", UserRouter) // added the route
+app.use("/api/v1/post", postRouter) // added the route
+
+// Default route for testing
+app.get("/", (_req, res) => {
+  res.send("API is running");
+});
+
+
+// 404 Handler
+app.use((req, res, next) => {
+  res.status(404).json({
+    success: false,
+    message: "Route Not Found",
+  });
+});
+
+export default app;
+
+```
+
+- postman 
+
+
+```json 
+{
+  "title": "Getting Started with Prisma ORM",
+  "content": "In this post, we will explore how to set up Prisma ORM with a PostgreSQL database, generate the client, and run queries easily.",
+  "thumbnail": "https://example.com/thumbnails/prisma-guide.png",
+  "isFeatured": true,
+  "tags": ["prisma", "nodejs", "typescript", "postgresql"],
+  "authorId": 3
+}
+
+```
