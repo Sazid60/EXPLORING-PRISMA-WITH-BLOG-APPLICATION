@@ -421,3 +421,98 @@ export const AuthServices = {
 ```
 
 ## 50-8 Google Auth: Register & Login
+- auth.route.ts 
+
+```ts 
+import express from 'express';
+import { AuthController } from './auth.controller';
+
+
+const router = express.Router();
+
+router.post(
+    "/login",
+    AuthController.loginWithEmailAndPassword
+)
+router.post(
+    "/google",
+    AuthController.authWithGoogle
+)
+
+
+export const AuthRouter = router;
+```
+- auth.controller.ts 
+
+```ts
+import { Request, Response } from "express";
+import { AuthServices } from "./auth.service";
+
+const loginWithEmailAndPassword = async (req: Request, res: Response) => {
+    try {
+        const result = await AuthServices.loginWithEmailAndPassword(req.body)
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).send(error)
+    }
+}
+const authWithGoogle = async (req: Request, res: Response) => {
+    try {
+        const result = await AuthServices.authWithGoogle(req.body)
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).send(error)
+    }
+}
+
+export const AuthController = {
+    loginWithEmailAndPassword,
+    authWithGoogle
+}
+```
+- auth.service.ts 
+
+```ts 
+import { Prisma } from "@prisma/client"
+import { prisma } from "../../config/db"
+
+/* eslint-disable no-console */
+const loginWithEmailAndPassword = async ({ email, password }: { email: string, password: string }) => {
+    console.log({ email, password })
+    const user = await prisma.user.findUnique({
+        where: {
+            email
+        }
+    })
+    if (!user) {
+        throw new Error("User Not Found!")
+    }
+
+    if (password === user.password) {
+        return user
+    }
+    else {
+        throw new Error("Password Incorrect!")
+    }
+}
+
+const authWithGoogle = async (data: Prisma.UserCreateInput) => {
+    console.log(data)
+    let user = await prisma.user.findUnique({
+        where:{
+            email : data.email
+        }
+    })
+    if(!user){
+        user = await prisma.user.create({
+            data
+        })
+    }
+    return user 
+}
+
+export const AuthServices = {
+    loginWithEmailAndPassword,
+    authWithGoogle
+}
+```
