@@ -1,12 +1,14 @@
+
+import express, { Request, Response } from "express"
 import compression from "compression";
 import cors from "cors";
-import express from "express";
+
+import { postRouter } from "./modules/post/post.routes";
 import { UserRouter } from "./modules/user/user.routes";
-import { postRouter } from "./modules/post/post.router";
 
-const app = express();
 
-// Middleware
+const app = express()
+
 app.use(cors()); // Enables Cross-Origin Resource Sharing
 app.use(compression()); // Compresses response bodies for faster delivery
 app.use(express.json()); // Parse incoming JSON requests
@@ -18,21 +20,20 @@ app.use(
   })
 );
 
-app.use("/api/v1/user", UserRouter) // added the route
+app.use("/api/v1/user", UserRouter);
 app.use("/api/v1/post", postRouter) // added the route
 
-// Default route for testing
-app.get("/", (_req, res) => {
-  res.send("API is running");
-});
+app.get("/", (req: Request, res: Response) => {
+    res.status(200).json({
+        message: "Welcome To The App"
+    })
+})
 
-
-// 404 Handler
-app.use((req, res, next) => {
+app.use((req: Request, res:Response) => {
   res.status(404).json({
     success: false,
     message: "Route Not Found",
   });
 });
 
-export default app;
+export default app
