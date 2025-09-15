@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import http, { Server } from "http";
 import app from "./app";
 import dotenv from "dotenv";
@@ -10,9 +11,9 @@ let server: Server | null = null;
 async function connectToDB() {
   try {
     await prisma.$connect()
-    console.log("Database Is Connected")
+    console.log("Woooo!! Database Is Connected !!")
   } catch (error) {
-    console.log("Database Db Connection Failed");
+    console.log("Database Db Connection Failed", error);
     process.exit(1)
   }
 }
