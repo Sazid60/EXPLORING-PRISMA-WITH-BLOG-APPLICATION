@@ -328,3 +328,26 @@ const getAllPosts = async ({ page = 1, limit = 10, search, isFeatured, tags, sor
     };
 };
 ```
+
+## 50-6 Prisma Transaction API(same as transaction rollback)
+- post.service.ts
+```ts 
+const getPostById = async (id: number) => {
+    return await prisma.$transaction(async (tx) => {
+        await tx.post.update({
+            where: { id },
+            data: {
+                views: {
+                    increment: 1
+                }
+            }
+        });
+        return await tx.post.findUnique({
+            where: { id },
+            include: { author: true },
+        });
+
+
+    })
+};
+```
