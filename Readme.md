@@ -351,3 +351,73 @@ const getPostById = async (id: number) => {
     })
 };
 ```
+
+## 50-7 Email & Password Authentication
+
+- auth.routes.ts 
+
+```ts 
+import express from 'express';
+import { AuthController } from './auth.controller';
+
+
+const router = express.Router();
+
+router.post(
+    "/",
+    AuthController.loginWithEmailAndPassword
+)
+
+
+export const AuthRouter = router;
+```
+- auth.controller.ts 
+
+```ts 
+import { Request, Response } from "express";
+import { AuthServices } from "./auth.service";
+
+const loginWithEmailAndPassword = async (req: Request, res: Response) => {
+    try {
+        const result = await AuthServices.loginWithEmailAndPassword(req.body)
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).send(error)
+    }
+}
+
+export const AuthController = {
+    loginWithEmailAndPassword
+}
+```
+- auth.service.ts 
+
+```ts 
+import { prisma } from "../../config/db"
+
+/* eslint-disable no-console */
+const loginWithEmailAndPassword = async ({ email, password }: { email: string, password: string }) => {
+    console.log({ email, password })
+    const user = await prisma.user.findUnique({
+        where: {
+            email
+        }
+    })
+    if (!user) {
+        throw new Error("User Not Found!")
+    }
+
+    if (password === user.password) {
+        return user
+    }
+    else {
+        throw new Error("Password Incorrect!")
+    }
+}
+
+export const AuthServices = {
+    loginWithEmailAndPassword
+}
+```
+
+## 50-8 Google Auth: Register & Login

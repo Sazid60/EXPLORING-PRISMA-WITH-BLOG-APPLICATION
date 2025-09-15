@@ -10,6 +10,7 @@ CREATE TABLE "public"."User" (
     "name" TEXT NOT NULL,
     "role" "public"."Role" NOT NULL DEFAULT 'USER',
     "email" TEXT NOT NULL,
+    "password" TEXT,
     "phone" TEXT NOT NULL,
     "picture" TEXT,
     "status" "public"."UserStatus" NOT NULL DEFAULT 'ACTIVE',
