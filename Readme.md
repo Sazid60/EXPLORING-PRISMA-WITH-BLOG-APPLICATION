@@ -206,3 +206,56 @@ const getAllPosts = async ({ page = 1, limit = 10, search, isFeatured }: { page?
 ```
 {{url}}/post?isFeatured=false
 ```
+
+## 50-4 Advanced Filtering in Prisma (Part 2)
+- filtering based on the tags 
+
+- post.controller.ts 
+
+```ts 
+const getAllPosts = async (req: Request, res: Response) => {
+    try {
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 10;
+        const search = (req.query.search as string) || ""
+        const isFeatured = req.query.isFeatured ? req.query.isFeatured ==="true": undefined
+        const tags = req.query.tags? (req.query.tags as string).split(",") :[]
+
+        const result = await PostService.getAllPosts({page,limit, search, isFeatured, tags});
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch posts", details: err });
+    }
+};
+```
+- for matching array element we can use `hasEvery`
+
+```ts 
+const getAllPosts = async ({ page = 1, limit = 10, search, isFeatured, tags }: { page?: number, limit?: number, search?: string, isFeatured?: boolean, tags?:string[] }) => {
+
+    console.log(page, limit)
+    const skip = (page - 1) * limit
+
+
+    console.log({ tags })
+    const where: any = {
+        AND: [
+            search && {
+                OR: [
+                    {title: {contains: search, mode: 'insensitive'}},
+                    {content: {contains: search,mode: 'insensitive'}}
+                ]
+            },
+            typeof isFeatured === "boolean" && {isFeatured },
+            tags && tags?.length > 0 && {tags:{hasEvery : tags}}
+        ].filter(Boolean) // for filtering we have to tell explicitly 
+    }
+    const result = await prisma.post.findMany({
+        skip,
+        take: limit,
+        where
+    });
+    return result;
+};
+
+```
