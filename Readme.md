@@ -421,3 +421,233 @@ export const AuthServices = {
 ```
 
 ## 50-8 Google Auth: Register & Login
+- auth.route.ts 
+
+```ts 
+import express from 'express';
+import { AuthController } from './auth.controller';
+
+
+const router = express.Router();
+
+router.post(
+    "/login",
+    AuthController.loginWithEmailAndPassword
+)
+router.post(
+    "/google",
+    AuthController.authWithGoogle
+)
+
+
+export const AuthRouter = router;
+```
+- auth.controller.ts 
+
+```ts
+import { Request, Response } from "express";
+import { AuthServices } from "./auth.service";
+
+const loginWithEmailAndPassword = async (req: Request, res: Response) => {
+    try {
+        const result = await AuthServices.loginWithEmailAndPassword(req.body)
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).send(error)
+    }
+}
+const authWithGoogle = async (req: Request, res: Response) => {
+    try {
+        const result = await AuthServices.authWithGoogle(req.body)
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).send(error)
+    }
+}
+
+export const AuthController = {
+    loginWithEmailAndPassword,
+    authWithGoogle
+}
+```
+- auth.service.ts 
+
+```ts 
+import { Prisma } from "@prisma/client"
+import { prisma } from "../../config/db"
+
+/* eslint-disable no-console */
+const loginWithEmailAndPassword = async ({ email, password }: { email: string, password: string }) => {
+    console.log({ email, password })
+    const user = await prisma.user.findUnique({
+        where: {
+            email
+        }
+    })
+    if (!user) {
+        throw new Error("User Not Found!")
+    }
+
+    if (password === user.password) {
+        return user
+    }
+    else {
+        throw new Error("Password Incorrect!")
+    }
+}
+
+const authWithGoogle = async (data: Prisma.UserCreateInput) => {
+    console.log(data)
+    let user = await prisma.user.findUnique({
+        where:{
+            email : data.email
+        }
+    })
+    if(!user){
+        user = await prisma.user.create({
+            data
+        })
+    }
+    return user 
+}
+
+export const AuthServices = {
+    loginWithEmailAndPassword,
+    authWithGoogle
+}
+```
+
+## 50-9 Data Aggregation in Prisma (Part 1)
+
+- post.route.ts 
+
+```ts 
+router.post(
+    "/stats",
+    PostController.getBlogStats
+)
+```
+- post.controller.ts 
+
+```ts 
+const getBlogStats = async (req: Request, res: Response) => {
+    try {
+        const result = await PostService.getBlogStats()
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).send(error)
+    }
+}
+```
+- post.service.ts 
+
+```ts
+const getBlogStats = async () => {
+    return await prisma.$transaction(async (tx) => {
+        const aggregates = await tx.post.aggregate({
+            _count: true,
+            _sum: { views: true },
+            _avg: { views: true },
+            _max: { views: true },
+            _min: { views: true }
+
+        })
+
+        const featuredCount = await tx.post.count({
+            where: {
+                isFeatured: true
+            }
+        })
+
+        const topFeatured = await tx.post.findFirst({
+            where: {
+                isFeatured: true
+
+            },
+            orderBy: {
+                views: "desc"
+            }
+        }) //which ever found first will send 
+
+        console.log(featuredCount)
+
+        return {
+            stats: {
+                totalPosts: aggregates._count ?? 0,
+                totalViews: aggregates._sum.views ?? 0,
+                avgViews: aggregates._avg.views ?? 0,
+                maxViews: aggregates._max.views ?? 0,
+                minViews: aggregates._min.views ?? 0,
+                featured: {
+                    count: featuredCount,
+                    topPost: topFeatured
+                }
+            }
+        }
+    })
+    // 
+};
+```
+
+## Advanced Aggregation 
+- post.service.ts 
+```ts 
+const getBlogStats = async () => {
+    return await prisma.$transaction(async (tx) => {
+        const aggregates = await tx.post.aggregate({
+            _count: true,
+            _sum: { views: true },
+            _avg: { views: true },
+            _max: { views: true },
+            _min: { views: true }
+
+        })
+
+        const featuredCount = await tx.post.count({
+            where: {
+                isFeatured: true
+            }
+        })
+
+        const lastWeek = new Date()
+
+        lastWeek.setDate(lastWeek.getDate() - 7)
+
+        const lastWeekPostCount = await tx.post.count({
+            where : {
+                createdAt :{
+                    gte : lastWeek
+                }
+            }
+        })
+
+        const topFeatured = await tx.post.findFirst({
+            where: {
+                isFeatured: true
+
+            },
+            orderBy: {
+                views: "desc"
+            }
+        }) //which ever found first will send 
+
+        console.log(featuredCount)
+
+        return {
+            stats: {
+                totalPosts: aggregates._count ?? 0,
+                totalViews: aggregates._sum.views ?? 0,
+                avgViews: aggregates._avg.views ?? 0,
+                maxViews: aggregates._max.views ?? 0,
+                minViews: aggregates._min.views ?? 0,
+                featured: {
+                    count: featuredCount,
+                    topPost: topFeatured
+                }
+            },
+            lastWeekPostCount
+        }
+    })
+    // 
+};
+```
