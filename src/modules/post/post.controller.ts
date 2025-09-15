@@ -17,8 +17,10 @@ const getAllPosts = async (req: Request, res: Response) => {
         const search = (req.query.search as string) || ""
         const isFeatured = req.query.isFeatured ? req.query.isFeatured ==="true": undefined
         const tags = req.query.tags? (req.query.tags as string).split(",") :[]
+        const sortBy = (req.query.sortBy as string) || "createAt"
+        const sortOrder = (req.query.sortOrder as string) || "desc"
 
-        const result = await PostService.getAllPosts({page,limit, search, isFeatured, tags});
+        const result = await PostService.getAllPosts({page,limit, search, isFeatured, tags, sortBy, sortOrder});
         res.json(result);
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch posts", details: err });

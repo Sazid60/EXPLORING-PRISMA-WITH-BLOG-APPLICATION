@@ -259,3 +259,72 @@ const getAllPosts = async ({ page = 1, limit = 10, search, isFeatured, tags }: {
 };
 
 ```
+
+## 50-5 Sorting & Metadata Techniques
+- sorting and meta data 
+- post.controller.ts 
+
+```ts
+const getAllPosts = async (req: Request, res: Response) => {
+    try {
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 10;
+        const search = (req.query.search as string) || ""
+        const isFeatured = req.query.isFeatured ? req.query.isFeatured ==="true": undefined
+        const tags = req.query.tags? (req.query.tags as string).split(",") :[]
+        const sortBy = (req.query.sortBy as string) || "createAt"
+        const sortOrder = (req.query.sortOrder as string) || "desc"
+
+        const result = await PostService.getAllPosts({page,limit, search, isFeatured, tags, sortBy, sortOrder});
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch posts", details: err });
+    }
+};
+
+
+```
+
+- post.service.ts
+
+```ts 
+const getAllPosts = async ({ page = 1, limit = 10, search, isFeatured, tags, sortBy, sortOrder }: { page?: number, limit?: number, search?: string, isFeatured?: boolean, tags?: string[], sortBy: string, sortOrder:string }) => {
+
+    console.log(page, limit)
+    const skip = (page - 1) * limit
+
+
+    // console.log({ tags })
+    const where: any = {
+        AND: [
+            search && {
+                OR: [
+                    { title: { contains: search, mode: 'insensitive' } },
+                    { content: { contains: search, mode: 'insensitive' } }
+                ]
+            },
+            typeof isFeatured === "boolean" && { isFeatured },
+            tags && tags?.length > 0 && { tags: { hasEvery: tags } }
+        ].filter(Boolean) // for filtering we have to tell explicitly 
+    }
+    const result = await prisma.post.findMany({
+        skip,
+        take: limit,
+        where,
+        orderBy : {
+            [sortBy] : sortOrder
+        }
+    });
+    const total = await prisma.post.count({where})
+
+    return {
+        data: result,
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages : Math.ceil(total/limit)
+        },
+    };
+};
+```
