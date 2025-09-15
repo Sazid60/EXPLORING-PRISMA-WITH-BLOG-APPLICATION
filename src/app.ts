@@ -5,6 +5,7 @@ import cors from "cors";
 
 import { postRouter } from "./modules/post/post.routes";
 import { UserRouter } from "./modules/user/user.routes";
+import { AuthRouter } from "./modules/auth/auth.routes";
 
 
 const app = express()
@@ -22,6 +23,7 @@ app.use(
 
 app.use("/api/v1/user", UserRouter);
 app.use("/api/v1/post", postRouter) // added the route
+app.use("/api/v1/auth", AuthRouter) // added the route
 
 app.get("/", (req: Request, res: Response) => {
     res.status(200).json({

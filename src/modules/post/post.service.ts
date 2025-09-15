@@ -20,7 +20,7 @@ const createPost = async (payload: Prisma.PostCreateInput): Promise<Post> => {
     return result;
 }
 
-const getAllPosts = async ({ page = 1, limit = 10, search, isFeatured, tags, sortBy, sortOrder }: { page?: number, limit?: number, search?: string, isFeatured?: boolean, tags?: string[], sortBy: string, sortOrder:string }) => {
+const getAllPosts = async ({ page = 1, limit = 10, search, isFeatured, tags, sortBy, sortOrder }: { page?: number, limit?: number, search?: string, isFeatured?: boolean, tags?: string[], sortBy: string, sortOrder: string }) => {
 
     console.log(page, limit)
     const skip = (page - 1) * limit
@@ -43,11 +43,20 @@ const getAllPosts = async ({ page = 1, limit = 10, search, isFeatured, tags, sor
         skip,
         take: limit,
         where,
-        orderBy : {
-            [sortBy] : sortOrder
+        include: {
+            author: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true
+                }
+            }
+        },
+        orderBy: {
+            [sortBy]: sortOrder
         }
     });
-    const total = await prisma.post.count({where})
+    const total = await prisma.post.count({ where })
 
     return {
         data: result,
@@ -55,18 +64,28 @@ const getAllPosts = async ({ page = 1, limit = 10, search, isFeatured, tags, sor
             page,
             limit,
             total,
-            totalPages : Math.ceil(total/limit)
+            totalPages: Math.ceil(total / limit)
         },
     };
 };
 
 const getPostById = async (id: number) => {
-    const result = await prisma.post.findUnique({
-        where: { id },
-        include: { author: true },
-    });
+    return await prisma.$transaction(async (tx) => {
+        await tx.post.update({
+            where: { id },
+            data: {
+                views: {
+                    increment: 1
+                }
+            }
+        });
+        return await tx.post.findUnique({
+            where: { id },
+            include: { author: true },
+        });
 
-    return result;
+
+    })
 };
 
 const updatePost = async (id: number, data: Partial<Post>) => {
