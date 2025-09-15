@@ -151,3 +151,58 @@ const getAllPosts = async ({ page, limit, search }: { page: number, limit: numbe
     return result;
 };
 ```
+
+## 50-3 Filtering Data with Prisma (Part 1)
+- post.controller.ts 
+
+```ts 
+const getAllPosts = async (req: Request, res: Response) => {
+    try {
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 10;
+        const search = (req.query.search as string) || ""
+        const isFeatured = req.query.isFeatured ? req.query.isFeatured ==="true": undefined
+
+        const result = await PostService.getAllPosts({page,limit, search, isFeatured});
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to fetch posts", details: err });
+    }
+};
+```
+
+- post.service.ts 
+
+```ts 
+const getAllPosts = async ({ page = 1, limit = 10, search, isFeatured }: { page?: number, limit?: number, search?: string, isFeatured?: boolean }) => {
+
+    console.log(page, limit)
+    const skip = (page - 1) * limit
+
+
+    console.log({ isFeatured })
+    const where: any = {
+        AND: [
+            search && {
+                OR: [
+                    {title: {contains: search, mode: 'insensitive'}},
+                    {content: {contains: search,mode: 'insensitive'}}
+                ]
+            },
+            typeof isFeatured === "boolean" && {isFeatured }
+        ].filter(Boolean) // for filtering we have to tell explicitly 
+    }
+    const result = await prisma.post.findMany({
+        skip,
+        take: limit,
+        where
+    });
+    return result;
+};
+```
+
+- postman hit 
+
+```
+{{url}}/post?isFeatured=false
+```

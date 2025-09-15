@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable no-console */
 import { Post, Prisma } from "@prisma/client";
 import { prisma } from "../../config/db";
@@ -19,28 +20,28 @@ const createPost = async (payload: Prisma.PostCreateInput): Promise<Post> => {
     return result;
 }
 
-const getAllPosts = async ({ page, limit, search }: { page: number, limit: number, search :string }) => {
+const getAllPosts = async ({ page = 1, limit = 10, search, isFeatured }: { page?: number, limit?: number, search?: string, isFeatured?: boolean }) => {
+
     console.log(page, limit)
     const skip = (page - 1) * limit
+
+
+    console.log({ isFeatured })
+    const where: any = {
+        AND: [
+            search && {
+                OR: [
+                    {title: {contains: search, mode: 'insensitive'}},
+                    {content: {contains: search,mode: 'insensitive'}}
+                ]
+            },
+            typeof isFeatured === "boolean" && {isFeatured }
+        ].filter(Boolean) // for filtering we have to tell explicitly 
+    }
     const result = await prisma.post.findMany({
         skip,
         take: limit,
-        where  :{
-            OR : [
-                {
-                    title : {
-                        contains : search,
-                        mode: 'insensitive'
-                    }
-                },
-                {
-                    content : {
-                        contains : search,
-                        mode: 'insensitive'
-                    }
-                }
-            ]
-        }
+        where
     });
     return result;
 };
