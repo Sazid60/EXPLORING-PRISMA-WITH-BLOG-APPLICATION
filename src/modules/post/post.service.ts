@@ -3,6 +3,52 @@
 import { Post, Prisma } from "@prisma/client";
 import { prisma } from "../../config/db";
 
+const getBlogStats = async () => {
+    return await prisma.$transaction(async (tx) => {
+        const aggregates = await tx.post.aggregate({
+            _count: true,
+            _sum: { views: true },
+            _avg: { views: true },
+            _max: { views: true },
+            _min: { views: true }
+
+        })
+
+        const featuredCount = await tx.post.count({
+            where: {
+                isFeatured: true
+            }
+        })
+
+        const topFeatured = await tx.post.findFirst({
+            where: {
+                isFeatured: true
+
+            },
+            orderBy: {
+                views: "desc"
+            }
+        }) //which ever found first will send 
+
+        console.log(featuredCount)
+
+        return {
+            stats: {
+                totalPosts: aggregates._count ?? 0,
+                totalViews: aggregates._sum.views ?? 0,
+                avgViews: aggregates._avg.views ?? 0,
+                maxViews: aggregates._max.views ?? 0,
+                minViews: aggregates._min.views ?? 0,
+                featured: {
+                    count: featuredCount,
+                    topPost: topFeatured
+                }
+            }
+        }
+    })
+    // 
+};
+
 const createPost = async (payload: Prisma.PostCreateInput): Promise<Post> => {
     const result = await prisma.post.create({
         data: payload,
@@ -101,5 +147,12 @@ export const PostService = {
     getAllPosts,
     getPostById,
     updatePost,
-    deletePost
+    deletePost,
+    getBlogStats
 }
+
+
+
+
+
+
